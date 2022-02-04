@@ -11,7 +11,7 @@ DESCRIPTION = "Wordle"
 COMPRESSED = YES
 ARCHIVED = NO
 
-CFLAGS = -Wall -Wextra -Oz
+CFLAGS = -Wall -Wextra -Oz -DCOMMIT=\"$(shell git rev-parse --short HEAD)\"
 CXXFLAGS = -Wall -Wextra -Oz
 
 # ----------------------------

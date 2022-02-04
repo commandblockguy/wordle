@@ -475,6 +475,8 @@ void graphics_screen_settings(uint8_t settings, uint8_t selection, uint24_t day)
     gfx_PrintChar('#');
     gfx_PrintUInt(day, 1);
 
+    gfx_PrintStringXY(COMMIT, LCD_WIDTH - gfx_GetStringWidth(COMMIT) - 8, LCD_HEIGHT - 10);
+
     gfx_SwapDraw();
 }
 
