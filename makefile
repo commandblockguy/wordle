@@ -9,7 +9,7 @@ NAME = WORDLE
 ICON = icon.png
 DESCRIPTION = "Wordle"
 COMPRESSED = YES
-ARCHIVED = NO
+ARCHIVED = YES
 
 CFLAGS = -Wall -Wextra -Oz -DCOMMIT=\"$(shell git rev-parse --short HEAD)\"
 CXXFLAGS = -Wall -Wextra -Oz
