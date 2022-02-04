@@ -4,10 +4,12 @@
 #include <time.h>
 #include <tice.h>
 
+#include "gfx/gfx.h"
+
 #define TILE_SIZE 24
 #define TILE_SPACING 3
 #define TILE_BASE_X (LCD_WIDTH / 2 - 2 * (TILE_SIZE + TILE_SPACING))
-#define TILE_BASE_Y 72
+#define TILE_BASE_Y 66
 
 enum color {
     COLOR_BG,
@@ -163,6 +165,11 @@ void graphics_frame(uint8_t cur_line, const char *word, const char guesses[][WOR
             draw_boxed_char(guesses[y][x], bg, border, center_x, center_y, width, height);
         }
     }
+
+    const uint8_t icon_y = LCD_HEIGHT - 22;
+    gfx_RLETSprite_NoClip(icon_help, 1 * LCD_WIDTH / 10 - icon_help_width / 2, icon_y);
+    gfx_RLETSprite_NoClip(icon_stats, 7 * LCD_WIDTH / 10 - icon_stats_width / 2, icon_y);
+    gfx_RLETSprite_NoClip(icon_settings, 9 * LCD_WIDTH / 10 - icon_settings_width / 2, icon_y);
 
 #ifndef NDEBUG
     // debug stuff

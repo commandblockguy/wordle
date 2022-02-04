@@ -1,0 +1,21 @@
+palettes:
+  - name: mypalette
+    fixed-entries:
+      - color: {index: 0, r: 0, g: 0, b: 0}
+      - color: {index: 1, r: 255, g: 255, b: 255}
+
+converts:
+  - name: myimages
+    palette: mypalette
+    transparent-color-index: 0
+    style: rlet
+    images:
+      - icon_help.png
+      - icon_stats.png
+      - icon_settings.png
+
+outputs:
+  - type: c
+    include-file: gfx.h
+    converts:
+      - myimages
