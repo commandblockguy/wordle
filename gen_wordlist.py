@@ -46,12 +46,15 @@ def encode(words):
     sorted_words = sorted(bitarrays, key=lambda x: (pad_to(x, max_len)).uint)
     # print(decode_n(codec, sorted_words[0], 0, 5)[0], sorted_words[0].bin)
     match_lengths = []
+    novel_bits_length = 0
     for prev, w in pairwise(sorted_words):
         pw_min = min(len(prev), len(w))
         matching, = (prev[:pw_min] ^ w[:pw_min]).find(BitArray(uint=1,length=1))
+        novel_bits_length += len(w) - matching - 1
         match_lengths.append(matching)
         # print(decode_bitarray(codec, w), w.bin)
     match_diffs = [c - p for p, c in pairwise(match_lengths)]
+    print("novel bits:", novel_bits_length / 8)
     diff_freqs = defaultdict(int)
     for d in match_diffs:
         diff_freqs[d] += 1
@@ -62,7 +65,8 @@ def encode(words):
     # todo: divide by 2, round down, should save on average 1/2 a bit? - maybe not due to 0 being absent
     result = sorted_words[0] + BitArray(uint=match_lengths[0], length=6) + sorted_words[1][match_lengths[0]:]
     for w, l, d in zip(sorted_words[2:], match_lengths[1:], match_diffs):
-        result += encode_bitarray(diff_len_codec, [d]) + w[l:]
+        # todo: the position we break on will always be a zero bit - take that into account when encoding diffs?
+        result += encode_bitarray(diff_len_codec, [d]) + w[l+1:]
     return result, codec, diff_len_codec
 
 
@@ -81,9 +85,9 @@ def decode(data, word_codec, diff_len_codec):
         (offset,), taken = decode_n(diff_len_codec, data[pos:], 1)
         match_len += offset
         pos += taken
-        word = word[:match_len] + data[pos:]
+        word = word[:match_len] + BitArray([not word[match_len]]) + data[pos:]
         chars, taken = decode_n(word_codec, word, 5)
-        pos += taken - match_len
+        pos += taken - match_len - 1
         result.add(''.join(chars))
 
     return result
