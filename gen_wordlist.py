@@ -1,14 +1,18 @@
 from bitstring import BitArray
 from dahuffman import HuffmanCodec
 from collections import defaultdict
-from itertools import pairwise
+from itertools import pairwise, chain
 
 
-def encode_bitarray(codec, text):
+def encode_single(codec, item):
+    b, v = codec.get_code_table()[item]
+    return BitArray(uint=v, length=b)
+
+
+def encode_word(codecs, text):
     result = BitArray()
-    for s in text:
-        b, v = codec.get_code_table()[s]
-        result += BitArray(uint=v, length=b)
+    for (p, c) in pairwise(chain([None], text)):
+        result += encode_single(codecs[p], c)
     return result
 
 
@@ -21,12 +25,13 @@ def decode_single(codec, bitarray):
             return lookup[size, buffer], size
 
 
-def decode_n(codec, bitarray, length):
+def decode_word(codecs, bitarray, length):
     taken = 0
     result = ''
+    char = None
     while len(result) < length:
-        item, size = decode_single(codec, bitarray[taken:])
-        result += item
+        char, size = decode_single(codecs[char], bitarray[taken:])
+        result += char
         taken += size
     return result, taken
 
@@ -46,13 +51,16 @@ def nth_0_pos(bitarray, n):
 
 
 def encode(words):
-    frequencies = defaultdict(int)
+    frequencies = defaultdict(lambda: defaultdict(int))
     for word in words:
-        for l in word:
-            frequencies[l] += 1
-    codec = HuffmanCodec.from_frequencies(frequencies, eof='Q')
-    codec.print_code_table()
-    bitarrays = [encode_bitarray(codec, w) for w in words]
+        for (p, c) in pairwise(chain([None], word)):
+            frequencies[p][c] += 1
+
+    codecs = {k: HuffmanCodec.from_frequencies(v, eof=next(iter(v))) for k, v in frequencies.items()}
+    for prev, codec in codecs.items():
+        print(prev)
+        codec.print_code_table()
+    bitarrays = [encode_word(codecs, w) for w in words]
     max_len = max(len(x) for x in bitarrays)
     print('max huffman length:', max_len)
     sorted_words = sorted(bitarrays, key=lambda x: (pad_to(x, max_len)).uint)
@@ -74,14 +82,14 @@ def encode(words):
         matching_zeros_freqs[d] += 1
     matching_zeros_codec = HuffmanCodec.from_frequencies(matching_zeros_freqs, eof=1)
     matching_zeros_codec.print_code_table()
-    print("total zero lens len:", sum(len(encode_bitarray(matching_zeros_codec, [x])) for x in matching_zeros) / 8)
+    print("total zero lens len:", sum(len(encode_single(matching_zeros_codec, x)) for x in matching_zeros) / 8)
     result = BitArray()
     for (p, w), l in zip(pairwise([BitArray(length=max_len)] + sorted_words), matching_zeros):
-        result += encode_bitarray(matching_zeros_codec, [l]) + w[nth_0_pos(p, l + 1) + 1:]
-    return result, codec, matching_zeros_codec
+        result += encode_single(matching_zeros_codec, l) + w[nth_0_pos(p, l + 1) + 1:]
+    return result, codecs, matching_zeros_codec
 
 
-def decode(data, word_codec, matching_zeros_codec):
+def decode(data, codecs, matching_zeros_codec):
     result = set()
     word = BitArray(length=64)
     pos = 0
@@ -91,7 +99,7 @@ def decode(data, word_codec, matching_zeros_codec):
         match_len = nth_0_pos(word, match_zeros + 1)
         pos += taken
         word = word[:match_len] + BitArray([not word[match_len]]) + data[pos:]
-        chars, taken = decode_n(word_codec, word, 5)
+        chars, taken = decode_word(codecs, word, 5)
         pos += taken - match_len - 1
         result.add(''.join(chars))
 
