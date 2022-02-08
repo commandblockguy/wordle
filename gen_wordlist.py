@@ -12,19 +12,22 @@ def encode_bitarray(codec, text):
     return result
 
 
-def decode_n(codec, bitarray, length):
+def decode_single(codec, bitarray):
     lookup = {(b, v): s for s, (b, v) in codec.get_code_table().items()}
 
-    taken = 0
-    size = 0
-    result = []
-    while len(result) < length:
-        size += 1
-        buffer = bitarray[taken:taken+size].uint
+    for size in range(1,len(bitarray)+1):
+        buffer = bitarray[:size].uint
         if (size, buffer) in lookup:
-            result.append(lookup[size, buffer])
-            taken += size
-            size = 0
+            return lookup[size, buffer], size
+
+
+def decode_n(codec, bitarray, length):
+    taken = 0
+    result = ''
+    while len(result) < length:
+        item, size = decode_single(codec, bitarray[taken:])
+        result += item
+        taken += size
     return result, taken
 
 
@@ -84,7 +87,7 @@ def decode(data, word_codec, matching_zeros_codec):
     pos = 0
 
     while pos < len(data):
-        (match_zeros,), taken = decode_n(matching_zeros_codec, data[pos:], 1)
+        match_zeros, taken = decode_single(matching_zeros_codec, data[pos:])
         match_len = nth_0_pos(word, match_zeros + 1)
         pos += taken
         word = word[:match_len] + BitArray([not word[match_len]]) + data[pos:]
@@ -103,7 +106,7 @@ with open('words.txt', 'r') as f:
     encoded, word_codec, len_codec = encode(words)
     # print(encoded)
     print(len(encoded) / 8)
-    decoded = sorted(decode(encoded, word_codec, len_codec))
-    # print(result)
-    print(len(words), len(decoded), sorted(words) == decoded)
+    decoded = decode(encoded, word_codec, len_codec)
+    # print(decoded)
+    print(len(words), len(decoded), words == decoded)
 
