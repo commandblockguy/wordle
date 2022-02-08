@@ -32,13 +32,22 @@ def pad_to(bits, length):
     return bits if len(bits) == length else bits + BitArray(uint=0, length=length-len(bits))
 
 
+def nth_0_pos(bitarray, n):
+    seen = 0
+    for i, v in enumerate(bitarray):
+        if not v:
+            seen += 1
+        if seen == n:
+            return i
+    return len(bitarray)
+
+
 def encode(words):
     frequencies = defaultdict(int)
     for word in words:
         for l in word:
             frequencies[l] += 1
     codec = HuffmanCodec.from_frequencies(frequencies, eof='Q')
-    codec._eof = None
     codec.print_code_table()
     bitarrays = [encode_bitarray(codec, w) for w in words]
     max_len = max(len(x) for x in bitarrays)
@@ -53,32 +62,30 @@ def encode(words):
         novel_bits_length += len(w) - matching - 1
         match_lengths.append(matching)
         # print(decode_bitarray(codec, w), w.bin)
-    match_diffs = [c - p for p, c in pairwise([0] + match_lengths)]
+    print(match_lengths)
+    matching_zeros = [sum(not x for x in w[:l]) for w, l in zip([BitArray(length=max_len)] + sorted_words, match_lengths)]
+    print(matching_zeros)
     print("novel bits:", novel_bits_length / 8)
-    diff_freqs = defaultdict(int)
-    for d in match_diffs:
-        diff_freqs[d] += 1
-    print(diff_freqs)
-    diff_len_codec = HuffmanCodec.from_frequencies(diff_freqs, eof=1)
-    diff_len_codec._eof = None
-    diff_len_codec.print_code_table()
-    # todo: divide by 2, round down, should save on average 1/2 a bit? - maybe not due to 0 being absent
+    matching_zeros_freqs = defaultdict(int)
+    for d in matching_zeros:
+        matching_zeros_freqs[d] += 1
+    matching_zeros_codec = HuffmanCodec.from_frequencies(matching_zeros_freqs, eof=1)
+    matching_zeros_codec.print_code_table()
+    print("total zero lens len:", sum(len(encode_bitarray(matching_zeros_codec, [x])) for x in matching_zeros) / 8)
     result = BitArray()
-    for w, l, d in zip(sorted_words, match_lengths, match_diffs):
-        # todo: the position we break on will always be a zero bit - take that into account when encoding diffs?
-        result += encode_bitarray(diff_len_codec, [d]) + w[l+1:]
-    return result, codec, diff_len_codec
+    for (p, w), l in zip(pairwise([BitArray(length=max_len)] + sorted_words), matching_zeros):
+        result += encode_bitarray(matching_zeros_codec, [l]) + w[nth_0_pos(p, l + 1) + 1:]
+    return result, codec, matching_zeros_codec
 
 
-def decode(data, word_codec, diff_len_codec):
+def decode(data, word_codec, matching_zeros_codec):
     result = set()
     word = BitArray(length=64)
-    match_len = 0
     pos = 0
 
     while pos < len(data):
-        (offset,), taken = decode_n(diff_len_codec, data[pos:], 1)
-        match_len += offset
+        (match_zeros,), taken = decode_n(matching_zeros_codec, data[pos:], 1)
+        match_len = nth_0_pos(word, match_zeros + 1)
         pos += taken
         word = word[:match_len] + BitArray([not word[match_len]]) + data[pos:]
         chars, taken = decode_n(word_codec, word, 5)
