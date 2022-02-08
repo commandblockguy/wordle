@@ -47,13 +47,13 @@ def encode(words):
     # print(decode_n(codec, sorted_words[0], 0, 5)[0], sorted_words[0].bin)
     match_lengths = []
     novel_bits_length = 0
-    for prev, w in pairwise(sorted_words):
+    for prev, w in pairwise([BitArray(length=max_len)] + sorted_words):
         pw_min = min(len(prev), len(w))
         matching, = (prev[:pw_min] ^ w[:pw_min]).find(BitArray(uint=1,length=1))
         novel_bits_length += len(w) - matching - 1
         match_lengths.append(matching)
         # print(decode_bitarray(codec, w), w.bin)
-    match_diffs = [c - p for p, c in pairwise(match_lengths)]
+    match_diffs = [c - p for p, c in pairwise([0] + match_lengths)]
     print("novel bits:", novel_bits_length / 8)
     diff_freqs = defaultdict(int)
     for d in match_diffs:
@@ -63,8 +63,8 @@ def encode(words):
     diff_len_codec._eof = None
     diff_len_codec.print_code_table()
     # todo: divide by 2, round down, should save on average 1/2 a bit? - maybe not due to 0 being absent
-    result = sorted_words[0] + BitArray(uint=match_lengths[0], length=6) + sorted_words[1][match_lengths[0]:]
-    for w, l, d in zip(sorted_words[2:], match_lengths[1:], match_diffs):
+    result = BitArray()
+    for w, l, d in zip(sorted_words, match_lengths, match_diffs):
         # todo: the position we break on will always be a zero bit - take that into account when encoding diffs?
         result += encode_bitarray(diff_len_codec, [d]) + w[l+1:]
     return result, codec, diff_len_codec
@@ -72,14 +72,9 @@ def encode(words):
 
 def decode(data, word_codec, diff_len_codec):
     result = set()
-    word, pos = decode_n(word_codec, data, 5)
-    result.add(''.join(word))
-    match_len = data[pos:pos+6].uint
-    pos += 6
-    word = data[:match_len] + data[pos:]
-    chars, taken = decode_n(word_codec, word, 5)
-    pos += taken - match_len
-    result.add(''.join(chars))
+    word = BitArray(length=64)
+    match_len = 0
+    pos = 0
 
     while pos < len(data):
         (offset,), taken = decode_n(diff_len_codec, data[pos:], 1)
