@@ -9,8 +9,8 @@
  *--------------------------------------
  * Program Name: Wordle
  * Author: commandblockguy
- * License:
- * Description:
+ * License: MIT
+ * Description: A clone of the word-guessing game Wordle.
  *--------------------------------------
 */
 
