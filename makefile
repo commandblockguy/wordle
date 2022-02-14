@@ -2,9 +2,6 @@
 # Makefile Options
 # ----------------------------
 
-PATH := /home/john/CEdev/bin:$(PATH)
-SHELL := env PATH=$(PATH) /bin/bash
-
 NAME = WORDLE
 ICON = icon.png
 DESCRIPTION = "Wordle"
