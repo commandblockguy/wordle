@@ -28,9 +28,13 @@ enum tile_type get_tile_type(const char guesses[][WORD_LENGTH], uint8_t guess, u
     } else {
         // Count occurrences in answer
         uint8_t count_answer = 0;
+        uint8_t count_correct = 0;
         for(uint8_t i = 0; i < WORD_LENGTH; i++) {
             if(c == word[i]) {
                 count_answer++;
+            }
+            if(guesses[guess][i] == word[i]) {
+                count_correct++;
             }
         }
         // Count how many tiles with this letter have already been shown as present or correct
@@ -41,7 +45,7 @@ enum tile_type get_tile_type(const char guesses[][WORD_LENGTH], uint8_t guess, u
             }
         }
         // Only mark present if there are fewer of this character already marked than there are in the answer
-        if(count_answer > count_prev) return TILE_PRESENT;
+        if(count_answer - count_correct > count_prev) return TILE_PRESENT;
         else return TILE_ABSENT;
     }
 }
