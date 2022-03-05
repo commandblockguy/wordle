@@ -337,6 +337,7 @@ void graphics_screen_help(void) {
                     .c = examples[i].tiles[j].c,
                     .bg = examples[i].tiles[j].bg,
                     .border = examples[i].tiles[j].border,
+                    .text_col = COLOR_WHITE,
                     .center_x = base_x + TILE_SIZE / 2 + (TILE_SIZE + TILE_SPACING) * j,
                     .center_y = examples[i].y + TILE_SIZE / 2,
                     .width = TILE_SIZE,
