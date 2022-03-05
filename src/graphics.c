@@ -52,8 +52,19 @@ const uint24_t anim_lengths[] = {
         [ANIM_SUCCESS]      = 100,
 };
 
-static void draw_boxed_char(char c, enum color bg, enum color border, uint24_t center_x, uint24_t center_y, uint8_t width, uint8_t height);
-static void get_tile_colors(enum color *bg, enum color *border, enum tile_type type);
+struct tile {
+    char c;
+    enum color bg;
+    enum color border;
+    uint24_t center_x;
+    uint24_t center_y;
+    uint8_t width;
+    uint8_t height;
+};
+
+static void draw_tile(const struct tile *tile);
+static void get_tile_colors(struct tile *tile, enum tile_type type);
+static void flip_tile(struct tile *tile, int frame);
 static void disp_title(void);
 static void disp_toast(const char *toast);
 
@@ -82,16 +93,16 @@ void graphics_frame(uint8_t cur_line, const char *word, const char guesses[][WOR
 
     for(uint8_t y = 0; y < MAX_GUESSES; y++) {
         for(uint8_t x = 0; x < WORD_LENGTH; x++) {
-            enum color bg, border;
-
             enum tile_type type = get_tile_type(guesses, y, x, word, cur_line);
-            get_tile_colors(&bg, &border, type);
+            struct tile tile;
+            tile.c = guesses[y][x];
+            get_tile_colors(&tile, type);
 
-            uint24_t center_x = TILE_BASE_X + (TILE_SIZE + TILE_SPACING) * x;
-            uint24_t center_y = TILE_BASE_Y + (TILE_SIZE + TILE_SPACING) * y;
+            tile.center_x = TILE_BASE_X + (TILE_SIZE + TILE_SPACING) * x;
+            tile.center_y = TILE_BASE_Y + (TILE_SIZE + TILE_SPACING) * y;
 
-            uint8_t width = TILE_SIZE;
-            uint8_t height = TILE_SIZE;
+            tile.width = TILE_SIZE;
+            tile.height = TILE_SIZE;
 
             if(anim_state->frame) {
                 switch(anim_state->animation) {
@@ -102,59 +113,41 @@ void graphics_frame(uint8_t cur_line, const char *word, const char guesses[][WOR
                                 continue;
                             }
                             const int8_t sizes[] = {1, 2, 1, -1, 0};
-                            width = TILE_SIZE + sizes[anim_state->frame - 1];
-                            height = TILE_SIZE + sizes[anim_state->frame - 1];
+                            tile.width = TILE_SIZE + sizes[anim_state->frame - 1];
+                            tile.height = TILE_SIZE + sizes[anim_state->frame - 1];
                         }
                         break;
                     }
                     case ANIM_FLIP_ALL: {
                         if(y < cur_line && guesses[y][x]) {
                             int tile_frame = 35 - anim_state->frame - 5 * x;
-                            if(tile_frame < 7) {
-                                bg = COLOR_BG;
-                                border = COLOR_ICONS;
-                            }
-                            if(tile_frame > 0 && tile_frame <= 15) {
-                                height = abs(TILE_SIZE - tile_frame * 2 * TILE_SIZE / 15);
-                            }
+                            flip_tile(&tile, tile_frame);
                         }
                         break;
                     }
                     case ANIM_FLIP_LINE: {
                         if(y == cur_line - 1) {
                             int tile_frame = 55 - anim_state->frame - 10 * x;
-                            if(tile_frame < 7) {
-                                bg = COLOR_BG;
-                                border = COLOR_ICONS;
-                            }
-                            if(tile_frame > 0 && tile_frame <= 15) {
-                                height = abs(TILE_SIZE - tile_frame * 2 * TILE_SIZE / 15);
-                            }
+                            flip_tile(&tile, tile_frame);
                         }
                         break;
                     }
                     case ANIM_INVALID_WORD: {
                         if(y == cur_line) {
-                            if(anim_state->frame % 4 == 0) center_x--;
-                            if(anim_state->frame % 4 == 2) center_x++;
+                            if(anim_state->frame % 4 == 0) tile.center_x--;
+                            if(anim_state->frame % 4 == 2) tile.center_x++;
                         }
                         break;
                     }
                     case ANIM_SUCCESS: {
                         if(y == cur_line - 1) {
                             int tile_flip_frame = 100 - anim_state->frame - 10 * x;
-                            if(tile_flip_frame < 7) {
-                                bg = COLOR_BG;
-                                border = COLOR_ICONS;
-                            }
-                            if(tile_flip_frame > 0 && tile_flip_frame <= 15) {
-                                height = abs(TILE_SIZE - tile_flip_frame * 2 * TILE_SIZE / 15);
-                            }
+                            flip_tile(&tile, tile_flip_frame);
 
                             int tile_hop_frame = 40 - anim_state->frame - 5 * x;
                             int8_t heights[20] = {1, 3, 6, 8, 10, 11, 12, 8, 4, -1, 0, 4, 5, 5, 4, 2, 1, 0, -1, -1};
                             if(tile_hop_frame > 0 && tile_hop_frame <= 20) {
-                                center_y -= heights[tile_hop_frame - 1];
+                                tile.center_y -= heights[tile_hop_frame - 1];
                             }
                         }
                         break;
@@ -162,7 +155,7 @@ void graphics_frame(uint8_t cur_line, const char *word, const char guesses[][WOR
                 }
             }
 
-            draw_boxed_char(guesses[y][x], bg, border, center_x, center_y, width, height);
+            draw_tile(&tile);
         }
     }
 
@@ -194,39 +187,49 @@ void graphics_start_anim(struct anim_state *state, enum animation anim) {
     state->frame = anim_lengths[anim];
 }
 
-static void draw_boxed_char(char c, enum color bg, enum color border, uint24_t center_x, uint24_t center_y, uint8_t width, uint8_t height) {
-    uint24_t base_x = center_x - width / 2;
-    uint24_t base_y = center_y - height / 2;
-    if(bg != COLOR_BG) {
-        gfx_SetColor(bg);
-        gfx_FillRectangle_NoClip(base_x, base_y, width, height);
+static void flip_tile(struct tile *tile, int frame) {
+    if(frame < 7) {
+        tile->bg = COLOR_BG;
+        tile->border = COLOR_ICONS;
     }
-    gfx_SetColor(border);
-    gfx_Rectangle_NoClip(base_x, base_y, width, height);
-    uint8_t height_scale = (height - 4) / 8;
-    if(c && height_scale) {
-        gfx_SetTextScale(2, height_scale);
-        gfx_SetTextFGColor(COLOR_WHITE);
-        gfx_SetTextXY(center_x - gfx_GetCharWidth(c) / 2 + 1, center_y - height_scale * 4 + 1);
-        gfx_PrintChar(c);
+    if(frame > 0 && frame <= 15) {
+        tile->height = abs(TILE_SIZE - frame * 2 * TILE_SIZE / 15);
     }
 }
 
-static void get_tile_colors(enum color *bg, enum color *border, enum tile_type type) {
+static void draw_tile(const struct tile *tile) {
+    uint24_t base_x = tile->center_x - tile->width / 2;
+    uint24_t base_y = tile->center_y - tile->height / 2;
+    if(tile->bg != COLOR_BG) {
+        gfx_SetColor(tile->bg);
+        gfx_FillRectangle_NoClip(base_x, base_y, tile->width, tile->height);
+    }
+    gfx_SetColor(tile->border);
+    gfx_Rectangle_NoClip(base_x, base_y, tile->width, tile->height);
+    uint8_t height_scale = (tile->height - 4) / 8;
+    if(tile->c && height_scale) {
+        gfx_SetTextScale(2, height_scale);
+        gfx_SetTextFGColor(COLOR_WHITE);
+        gfx_SetTextXY(tile->center_x - gfx_GetCharWidth(tile->c) / 2 + 1, tile->center_y - height_scale * 4 + 1);
+        gfx_PrintChar(tile->c);
+    }
+}
+
+static void get_tile_colors(struct tile *tile, enum tile_type type) {
     switch (type) {
         case TILE_EMPTY: {
-            *border = COLOR_ABSENT;
-            *bg = COLOR_BG;
+            tile->border = COLOR_ABSENT;
+            tile->bg = COLOR_BG;
             return;
         }
         case TILE_UNSUBMITTED: {
-            *border = COLOR_ICONS;
-            *bg = COLOR_BG;
+            tile->border = COLOR_ICONS;
+            tile->bg = COLOR_BG;
             return;
         }
-        case TILE_CORRECT: *border = *bg = COLOR_CORRECT; return;
-        case TILE_PRESENT: *border = *bg = COLOR_PRESENT; return;
-        case TILE_ABSENT: *border = *bg = COLOR_ABSENT; return;
+        case TILE_CORRECT: tile->border = tile->bg = COLOR_CORRECT; return;
+        case TILE_PRESENT: tile->border = tile->bg = COLOR_PRESENT; return;
+        case TILE_ABSENT: tile->border = tile->bg = COLOR_ABSENT; return;
     }
 }
 
@@ -327,9 +330,16 @@ void graphics_screen_help(void) {
 
     for(uint8_t i = 0; i < sizeof examples / sizeof examples[0]; i++) {
         for(uint8_t j = 0; j < WORD_LENGTH; j++) {
-            draw_boxed_char(examples[i].tiles[j].c, examples[i].tiles[j].bg, examples[i].tiles[j].border,
-                            base_x + TILE_SIZE / 2 + (TILE_SIZE + TILE_SPACING) * j, examples[i].y + TILE_SIZE / 2,
-                            TILE_SIZE, TILE_SIZE);
+            struct tile tile = {
+                    .c = examples[i].tiles[j].c,
+                    .bg = examples[i].tiles[j].bg,
+                    .border = examples[i].tiles[j].border,
+                    .center_x = base_x + TILE_SIZE / 2 + (TILE_SIZE + TILE_SPACING) * j,
+                    .center_y = examples[i].y + TILE_SIZE / 2,
+                    .width = TILE_SIZE,
+                    .height = TILE_SIZE
+            };
+            draw_tile(&tile);
         }
     }
 
