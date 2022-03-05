@@ -56,6 +56,7 @@ struct tile {
     char c;
     enum color bg;
     enum color border;
+    enum color text_col;
     uint24_t center_x;
     uint24_t center_y;
     uint8_t width;
@@ -209,13 +210,14 @@ static void draw_tile(const struct tile *tile) {
     uint8_t height_scale = (tile->height - 4) / 8;
     if(tile->c && height_scale) {
         gfx_SetTextScale(2, height_scale);
-        gfx_SetTextFGColor(COLOR_WHITE);
+        gfx_SetTextFGColor(tile->text_col);
         gfx_SetTextXY(tile->center_x - gfx_GetCharWidth(tile->c) / 2 + 1, tile->center_y - height_scale * 4 + 1);
         gfx_PrintChar(tile->c);
     }
 }
 
 static void get_tile_colors(struct tile *tile, enum tile_type type) {
+    tile->text_col = COLOR_WHITE;
     switch (type) {
         case TILE_EMPTY: {
             tile->border = COLOR_ABSENT;
@@ -225,6 +227,7 @@ static void get_tile_colors(struct tile *tile, enum tile_type type) {
         case TILE_UNSUBMITTED: {
             tile->border = COLOR_ICONS;
             tile->bg = COLOR_BG;
+            tile->text_col = COLOR_TEXT;
             return;
         }
         case TILE_CORRECT: tile->border = tile->bg = COLOR_CORRECT; return;
