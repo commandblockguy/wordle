@@ -9,7 +9,7 @@ for the TI-84 Plus CE and TI-83 Premium CE graphing calculators.
 *(A video tutorial for the following steps is also available
 [here](https://www.youtube.com/watch?v=_e8pgw9d7S4))*
 
-Transfer [WORDLE.8xp](https://github.com/commandblockguy/wordle/releases/latest/download/WORDLE.8xp),
+Transfer [WORDLE_sellout.8xp](https://github.com/commandblockguy/wordle/releases/latest/download/WORDLE_sellout.8xp),
 [WORDS.8xv](https://github.com/commandblockguy/wordle/releases/latest/download/WORDS.8xv)
 and the [C Libraries](https://tiny.cc/clibs) to the calculator using TI Connect CE
 or TiLP. Then, select prgmWORDLE from the program menu and press enter.
