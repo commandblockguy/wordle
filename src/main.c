@@ -174,7 +174,7 @@ void play_game(int day) {
     dbg_printf("streak: %u\n", save.current_streak);
     dbg_printf("max streak: %u\n", save.max_streak);
     dbg_printf("played: %u\n", save.games_played);
-    dbg_printf("guesses: %.30s\n", save.guesses);
+    dbg_printf("guesses: %.30s\n", *save.guesses);
 
     save.day = day;
 
