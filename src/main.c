@@ -32,9 +32,9 @@ enum tile_type get_tile_type(const char guesses[][WORD_LENGTH], uint8_t guess, u
         for(uint8_t i = 0; i < WORD_LENGTH; i++) {
             if(c == word[i]) {
                 count_answer++;
-            }
-            if(guesses[guess][i] == word[i]) {
-                count_correct++;
+                if(guesses[guess][i] == word[i]) {
+                    count_correct++;
+                }
             }
         }
         // Count how many tiles with this letter have already been shown as present or correct
