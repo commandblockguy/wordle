@@ -1,0 +1,44 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        wordlist: [Original, Sellout]
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: robinraju/release-downloader@v1.8
+      with: 
+        repository: "CE-Programming/toolchain"
+        latest: true
+        fileName: "CEdev-Linux.tar.gz"
+        out-file-path: ""
+        extract: true
+        
+    - name: Set up PATH
+      run: echo "PATH=$PATH:${{ github.workspace }}/CEdev/bin" >> $GITHUB_ENV
+
+    - name: Make gfx
+      run: make gfx
+
+    - name: Run make
+      run: make
+      env:
+        SELLOUT: ${{ (matrix.wordlist == 'Sellout') && 1 || 0 }}
+      
+    - name: Create artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Wordle ${{ matrix.wordlist }}
+        path: bin/WORDLE.8xp

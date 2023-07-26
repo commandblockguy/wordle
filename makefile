@@ -8,7 +8,9 @@ DESCRIPTION = "Wordle"
 COMPRESSED = YES
 ARCHIVED = YES
 
-CFLAGS = -Wall -Wextra -Oz -DCOMMIT=\"$(shell git rev-parse --short HEAD)\"
+WORDLIST ?= 1
+
+CFLAGS = -Wall -Wextra -Oz -DCOMMIT=\"$(shell git rev-parse --short HEAD)\" -DSELLOUT_MODE=$(SELLOUT)
 CXXFLAGS = -Wall -Wextra -Oz
 
 # ----------------------------

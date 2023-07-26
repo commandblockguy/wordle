@@ -1,6 +1,8 @@
 #include "words.h"
 
-#define SELLOUT_MODE 1
+#ifndef SELLOUT_MODE
+#define SELLOUT_MODE 0
+#endif
 
 // WARNING: Here be spoilers!
 
